@@ -1,11 +1,82 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { TouchableOpacity, View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { BlurView } from 'expo-blur';
 
-export default function CarCard({ car }) {
+const width = Dimensions.get('window').width;
+
+export default function CarCard({ item, onPress }) {
+    const imageUrl = item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : null;
+
     return (
-        <View style={{ padding: 16, borderBottomWidth: 1 }}>
-            <Text>{car.model}</Text>
-            <Text>{car.plate}</Text>
-        </View>
+        <TouchableOpacity onPress={onPress} style={styles.wrapper}>
+            <BlurView intensity={20} tint="light" style={styles.card}>
+                {imageUrl ? (
+                    <Image source={{ uri: imageUrl }} style={styles.image} />
+                ) : (
+                    <View style={styles.placeholder}>
+                        <Text style={styles.placeholderText}>No Image</Text>
+                    </View>
+                )}
+                <View style={styles.info}>
+                    <Text style={styles.brand}>{item.brand}</Text>
+                    <Text style={styles.model}>{item.model}</Text>
+                    <Text style={styles.year}>
+                        {item.year} · {item.color}
+                    </Text>
+                </View>
+            </BlurView>
+        </TouchableOpacity>
     );
 }
+
+const styles = StyleSheet.create({
+    wrapper: {
+        marginBottom: 18,
+        alignItems: 'center',
+    },
+    card: {
+        width: width - 32,
+        height: 120,
+        borderRadius: 16,
+        flexDirection: 'row',
+        overflow: 'hidden',
+        backgroundColor: 'rgba(255,255,255,0.35)',
+    },
+    image: {
+        width: 140,
+        height: '100%',
+        resizeMode: 'cover',
+    },
+    placeholder: {
+        width: 140,
+        height: '100%',
+        backgroundColor: '#E0E6EF',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    placeholderText: {
+        color: '#6E7A8A',
+        fontSize: 14,
+    },
+    info: {
+        flex: 1,
+        padding: 16,
+        justifyContent: 'center',
+    },
+    brand: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1E2B3B',
+    },
+    model: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#3A485A',
+        marginTop: 4,
+    },
+    year: {
+        fontSize: 14,
+        color: '#6E7A8A',
+        marginTop: 4,
+    },
+});

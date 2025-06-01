@@ -4,11 +4,10 @@ import {
     ActivityIndicator, Platform
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import AuthorizationAPI from '../../api/Authorization';            // поправьте путь
+import AuthorizationAPI from '../../api/Authorization';
 import { signUpStyles as styles } from './styles/SignUpStyles';
 
 export default function SignUpScreen({ navigation, route }) {
-    // если передаётся профиль из предыдущего шага – возьмём, иначе {}
     const profileData = route?.params || {};
 
     const [form, setForm] = useState({
@@ -50,10 +49,12 @@ export default function SignUpScreen({ navigation, route }) {
             date_of_birth: form.date_of_birth.toISOString().slice(0, 10),
         };
 
+
         try {
-            await AuthorizationAPI.register(payload);
+            const res = await AuthorizationAPI.register(payload);
             navigation.replace('Login');
         } catch (err) {
+            console.log('ERROR RESPONSE ←', err.response?.data);
             const data = err.response?.data;
             if (data?.errors)       setErrors(data.errors);
             else if (data?.message) setErrors({ message: data.message });

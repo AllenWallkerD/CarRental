@@ -22,6 +22,11 @@
         "backgroundColor": "#ffffff",
         "package": "com.almas.carregistration"
       },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyC75v5LMOiI4y6XhQodUK4GOFZVL69NoiA"
+        }
+      },
       "edgeToEdgeEnabled": true
     },
     "web": {
