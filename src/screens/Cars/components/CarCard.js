@@ -1,15 +1,28 @@
 import React from 'react';
-import { TouchableOpacity, View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import {
+    TouchableOpacity,
+    View,
+    Text,
+    Image,
+    StyleSheet,
+    Dimensions,
+} from 'react-native';
 import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
 
 const width = Dimensions.get('window').width;
 
-export default function CarCard({ item, onPress }) {
-    const imageUrl = item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : null;
+export default function CarCard({ item, onPress, onDelete }) {
+    const imageUrl =
+        item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : null;
 
     return (
         <TouchableOpacity onPress={onPress} style={styles.wrapper}>
             <BlurView intensity={20} tint="light" style={styles.card}>
+                <TouchableOpacity style={styles.deleteIcon} onPress={onDelete}>
+                    <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                </TouchableOpacity>
+
                 {imageUrl ? (
                     <Image source={{ uri: imageUrl }} style={styles.image} />
                 ) : (
@@ -17,6 +30,7 @@ export default function CarCard({ item, onPress }) {
                         <Text style={styles.placeholderText}>No Image</Text>
                     </View>
                 )}
+
                 <View style={styles.info}>
                     <Text style={styles.brand}>{item.brand}</Text>
                     <Text style={styles.model}>{item.model}</Text>
@@ -40,7 +54,16 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         flexDirection: 'row',
         overflow: 'hidden',
-        backgroundColor: 'rgba(255,255,255,0.35)',
+        backgroundColor: "#D7E7FF",
+    },
+    deleteIcon: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        zIndex: 1,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        borderRadius: 12,
+        padding: 4,
     },
     image: {
         width: 140,

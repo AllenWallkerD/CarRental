@@ -1,30 +1,116 @@
-// screens/Cars/CarDetailScreen.js
-import React from 'react';
+import React, { useLayoutEffect, useEffect } from 'react';
 import {
     SafeAreaView,
     View,
-    Text,
-    StyleSheet,
     Image,
     ScrollView,
     TouchableOpacity,
+    TextInput,
+    Alert,
+    ActivityIndicator,
+    StyleSheet,
     Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
+import useCarDetail from './hooks/useCarDetail';
+import ChoiceModal from './components/ChoiceModal';
+import { Text } from 'react-native';
 
 const { width: screenW } = Dimensions.get('window');
+const blue = '#0A84FF';
 
 export default function CarDetailScreen({ navigation, route }) {
-    const { car } = route.params;
+    const { car: initialCar } = route.params;
+    const {
+        car,
+        editMode,
+        loading,
+        brand,
+        setBrand,
+        model,
+        setModel,
+        year,
+        setYear,
+        color,
+        setColor,
+        pricePerDay,
+        setPricePerDay,
+        country,
+        setCountry,
+        city,
+        setCity,
+        latitude,
+        setLatitude,
+        longitude,
+        setLongitude,
+        description,
+        setDescription,
+        brandModalVisible,
+        setBrandModalVisible,
+        modelModalVisible,
+        setModelModalVisible,
+        brandSearch,
+        setBrandSearch,
+        modelSearch,
+        setModelSearch,
+        allBrands,
+        allModels,
+        hasCoordinates,
+        toggleEditMode,
+        cancelEdit,
+        handleSave,
+    } = useCarDetail(initialCar);
 
-    // Проверяем, есть ли валидные координаты
-    const hasCoordinates =
-        car.latitude != null &&
-        car.longitude != null &&
-        !isNaN(car.latitude) &&
-        !isNaN(car.longitude);
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerShown: true,
+            headerTitle: `${car.brand} ${car.model}`,
+            headerTitleAlign: 'center',
+            headerTintColor: blue,
+            headerTitleStyle: {
+                fontSize: 20,
+                fontWeight: '700',
+                color: '#1E2B3B',
+            },
+            headerLeft: () => (
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    style={{ paddingHorizontal: 12 }}
+                >
+                    <Ionicons name="chevron-back" size={28} color={blue} />
+                </TouchableOpacity>
+            ),
+            headerRight: () => {
+                if (loading) {
+                    return <ActivityIndicator style={{ marginRight: 16 }} size="small" color={blue} />;
+                }
+                return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
+                        {editMode && (
+                            <TouchableOpacity onPress={cancelEdit} style={{ paddingHorizontal: 8 }}>
+                                <Ionicons name="close-circle-outline" size={24} color={blue} />
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity onPress={toggleEditMode} style={{ paddingHorizontal: 8 }}>
+                            <Ionicons
+                                name={editMode ? 'checkmark-circle-outline' : 'pencil-outline'}
+                                size={24}
+                                color={blue}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                );
+            },
+        });
+    }, [navigation, car, editMode, loading]);
+
+    useEffect(() => {
+        navigation.setOptions({
+            headerTitle: `${brand || car.brand} ${model || car.model}`,
+        });
+    }, [brand, model, navigation, car.brand, car.model]);
 
     return (
         <LinearGradient
@@ -34,139 +120,250 @@ export default function CarDetailScreen({ navigation, route }) {
             style={{ flex: 1 }}
         >
             <SafeAreaView style={styles.container}>
-                {/* Заголовок с кнопкой «назад» и названием машины */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <Ionicons name="chevron-back" size={28} color="#0A84FF" />
-                    </TouchableOpacity>
-                    <Text style={styles.title}>
-                        {car.brand} {car.model}
-                    </Text>
-                    <View style={{ width: 28 }} />
-                </View>
-
                 <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-                    {/* === Карусель изображений === */}
                     <ScrollView
                         horizontal
                         pagingEnabled
                         showsHorizontalScrollIndicator={false}
                         style={styles.carousel}
                     >
-                        {/* К каждому URL из car.imageUrls рендерим <Image source={{uri: url}} /> */}
                         {car.imageUrls.map((url, idx) => (
-                            <Image
-                                key={idx}
-                                source={{ uri: url }}
-                                style={styles.carouselImage}
-                            />
+                            <Image key={idx} source={{ uri: url }} style={styles.carouselImage} />
                         ))}
                     </ScrollView>
 
-                    {/* Точки-индикаторы (dots) под каруселью */}
                     <View style={styles.dotsContainer}>
                         {car.imageUrls.map((_, idx) => (
                             <View key={idx} style={styles.dot} />
                         ))}
                     </View>
 
-                    {/* === Карточка с данными машины === */}
                     <View style={styles.card}>
-                        {/* Brand */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>Brand</Text>
-                            <Text style={styles.rowValue}>{car.brand}</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Brand</Text>
+                            </View>
+                            {editMode ? (
+                                <TouchableOpacity
+                                    style={styles.rowInput}
+                                    onPress={() => setBrandModalVisible(true)}
+                                >
+                                    <Text style={styles.rowValue}>{brand || 'Select brand'}</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <Text style={styles.rowValue}>{car.brand}</Text>
+                            )}
                         </View>
                         <View style={styles.separator} />
 
-                        {/* Model */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>Model</Text>
-                            <Text style={styles.rowValue}>{car.model}</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Model</Text>
+                            </View>
+                            {editMode ? (
+                                <TouchableOpacity
+                                    style={styles.rowInput}
+                                    onPress={() => brand && setModelModalVisible(true)}
+                                >
+                                    <Text style={styles.rowValue}>{model || 'Select model'}</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <Text style={styles.rowValue}>{car.model}</Text>
+                            )}
                         </View>
                         <View style={styles.separator} />
 
-                        {/* Year */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>Year</Text>
-                            <Text style={styles.rowValue}>{String(car.year)}</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Year</Text>
+                            </View>
+                            {editMode ? (
+                                <TextInput
+                                    style={styles.rowInput}
+                                    value={year}
+                                    onChangeText={setYear}
+                                    placeholder="Year"
+                                    keyboardType="numeric"
+                                    textAlign="right"
+                                />
+                            ) : (
+                                <Text style={styles.rowValue}>{car.year}</Text>
+                            )}
                         </View>
                         <View style={styles.separator} />
 
-                        {/* Color */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>Color</Text>
-                            <Text style={styles.rowValue}>{car.color}</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Color</Text>
+                            </View>
+                            {editMode ? (
+                                <TextInput
+                                    style={styles.rowInput}
+                                    value={color}
+                                    onChangeText={setColor}
+                                    placeholder="Color"
+                                    textAlign="right"
+                                />
+                            ) : (
+                                <Text style={styles.rowValue}>{car.color}</Text>
+                            )}
                         </View>
                         <View style={styles.separator} />
 
-                        {/* Price/Day */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>Price/Day</Text>
-                            <Text style={styles.rowValue}>${car.pricePerDay}</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Price/Day</Text>
+                            </View>
+                            {editMode ? (
+                                <TextInput
+                                    style={styles.rowInput}
+                                    value={pricePerDay}
+                                    onChangeText={setPricePerDay}
+                                    placeholder="Price"
+                                    keyboardType="numeric"
+                                    textAlign="right"
+                                />
+                            ) : (
+                                <Text style={styles.rowValue}>${car.pricePerDay}</Text>
+                            )}
                         </View>
                         <View style={styles.separator} />
 
-                        {/* Country */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>Country</Text>
-                            <Text style={styles.rowValue}>{car.country}</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Country</Text>
+                            </View>
+                            {editMode ? (
+                                <TextInput
+                                    style={styles.rowInput}
+                                    value={country}
+                                    onChangeText={setCountry}
+                                    placeholder="Country"
+                                    textAlign="right"
+                                />
+                            ) : (
+                                <Text style={styles.rowValue}>{car.country}</Text>
+                            )}
                         </View>
                         <View style={styles.separator} />
 
-                        {/* City */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>City</Text>
-                            <Text style={styles.rowValue}>{car.city}</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>City</Text>
+                            </View>
+                            {editMode ? (
+                                <TextInput
+                                    style={styles.rowInput}
+                                    value={city}
+                                    onChangeText={setCity}
+                                    placeholder="City"
+                                    textAlign="right"
+                                />
+                            ) : (
+                                <Text style={styles.rowValue}>{car.city}</Text>
+                            )}
                         </View>
                         <View style={styles.separator} />
 
-                        {/* Available */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>Available</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Latitude</Text>
+                            </View>
+                            {editMode ? (
+                                <TextInput
+                                    style={styles.rowInput}
+                                    value={latitude}
+                                    onChangeText={setLatitude}
+                                    placeholder="Latitude"
+                                    keyboardType="numeric"
+                                    textAlign="right"
+                                />
+                            ) : (
+                                <Text style={styles.rowValue}>
+                                    {car.latitude?.toFixed(6) ?? '—'}
+                                </Text>
+                            )}
+                        </View>
+                        <View style={styles.separator} />
+
+                        <View style={styles.row}>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Longitude</Text>
+                            </View>
+                            {editMode ? (
+                                <TextInput
+                                    style={styles.rowInput}
+                                    value={longitude}
+                                    onChangeText={setLongitude}
+                                    placeholder="Longitude"
+                                    keyboardType="numeric"
+                                    textAlign="right"
+                                />
+                            ) : (
+                                <Text style={styles.rowValue}>
+                                    {car.longitude?.toFixed(6) ?? '—'}
+                                </Text>
+                            )}
+                        </View>
+                        <View style={styles.separator} />
+
+                        <View style={styles.row}>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Available</Text>
+                            </View>
                             <Text style={styles.rowValue}>
                                 {car.available ? 'Yes' : 'No'}
                             </Text>
                         </View>
                         <View style={styles.separator} />
 
-                        {/* Owner Name */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>Owner Name</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Owner Name</Text>
+                            </View>
                             <Text style={styles.rowValue}>
                                 {car.ownerFirstName} {car.ownerLastName}
                             </Text>
                         </View>
                         <View style={styles.separator} />
 
-                        {/* Owner Email */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>Owner Email</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Owner Email</Text>
+                            </View>
                             <Text style={styles.rowValue}>{car.ownerEmail}</Text>
                         </View>
                         <View style={styles.separator} />
 
-                        {/* Owner Phone */}
                         <View style={styles.row}>
-                            <Text style={styles.rowLabel}>Owner Phone</Text>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Owner Phone</Text>
+                            </View>
                             <Text style={styles.rowValue}>{car.ownerPhoneNumber}</Text>
                         </View>
+                        <View style={styles.separator} />
 
-                        {/* Описание (если есть) */}
-                        {car.description ? (
-                            <>
-                                <View style={styles.separator} />
-                                <View style={[styles.row, { alignItems: 'flex-start' }]}>
-                                    <Text style={styles.rowLabel}>Description</Text>
-                                    <Text style={[styles.rowValue, { flex: 1 }]}>
-                                        {car.description}
-                                    </Text>
-                                </View>
-                            </>
-                        ) : null}
+                        <View style={[styles.row, { alignItems: 'flex-start' }]}>
+                            <View style={styles.labelContainer}>
+                                <Text style={styles.rowLabel}>Description</Text>
+                            </View>
+                            {editMode ? (
+                                <TextInput
+                                    style={[styles.rowInput, { height: 80 }]}
+                                    value={description}
+                                    onChangeText={setDescription}
+                                    placeholder="Description"
+                                    multiline
+                                    textAlign="right"
+                                />
+                            ) : (
+                                <Text style={[styles.rowValue, { flex: 1 }]}>
+                                    {car.description || '—'}
+                                </Text>
+                            )}
+                        </View>
                     </View>
 
-                    {/* === Карта с маркером, если заданы координаты === */}
                     {hasCoordinates && (
                         <View style={styles.mapContainer}>
                             <MapView
@@ -191,22 +388,41 @@ export default function CarDetailScreen({ navigation, route }) {
                     )}
                 </ScrollView>
             </SafeAreaView>
+
+            <ChoiceModal
+                visible={brandModalVisible}
+                title="Select a brand"
+                data={allBrands}
+                search={brandSearch}
+                setSearch={setBrandSearch}
+                onSelect={(v) => {
+                    setBrand(v);
+                    setModel('');
+                    setBrandModalVisible(false);
+                }}
+                onClose={() => setBrandModalVisible(false)}
+            />
+
+            <ChoiceModal
+                visible={modelModalVisible}
+                title="Select a model"
+                data={allModels}
+                search={modelSearch}
+                setSearch={setModelSearch}
+                onSelect={(v) => {
+                    setModel(v);
+                    setModelModalVisible(false);
+                }}
+                onClose={() => setModelModalVisible(false)}
+            />
         </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+    container: {
+        flex: 1,
     },
-    title: { fontSize: 20, fontWeight: '700', color: '#1E2B3B' },
-
     carousel: {
         width: screenW,
         height: 220,
@@ -229,7 +445,6 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         backgroundColor: '#C5CED6',
     },
-
     card: {
         borderRadius: 16,
         backgroundColor: 'rgba(255,255,255,0.8)',
@@ -243,12 +458,14 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         marginBottom: 24,
     },
-
     row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingVertical: 8,
+    },
+    labelContainer: {
+        width: 100,
     },
     rowLabel: {
         fontSize: 16,
@@ -262,11 +479,22 @@ const styles = StyleSheet.create({
         flexShrink: 1,
         textAlign: 'right',
     },
+    rowInput: {
+        flex: 1,
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1E2B3B',
+        borderWidth: 1,
+        borderColor: '#C5CED6',
+        borderRadius: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        backgroundColor: '#FFF',
+    },
     separator: {
         height: 1,
         backgroundColor: '#E0E6EF',
     },
-
     mapContainer: {
         height: 200,
         marginHorizontal: 16,

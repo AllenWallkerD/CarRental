@@ -24,7 +24,6 @@ export default function SignUpScreen({ navigation, route }) {
 
     const onChange = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
-    /** простая валидация */
     const validate = () => {
         const e = {};
         if (!form.username.trim())            e.username = 'Required';
@@ -94,7 +93,6 @@ export default function SignUpScreen({ navigation, route }) {
                 </View>
             ))}
 
-            {/* Date of birth */}
             <View style={styles.wrap}>
                 <TouchableOpacity
                     style={[

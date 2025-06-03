@@ -22,7 +22,7 @@ export default function LoginScreen({ navigation }) {
             const { userId, token } = await AuthorizationAPI.login({ username, password });
 
             await login({ userId, token });
-            // после этого RootNavigation должен показать AppTabs
+            console.log(userId);
         } catch (err) {
             Alert.alert('Error', err?.response?.data?.message || 'Something went wrong.');
         } finally {

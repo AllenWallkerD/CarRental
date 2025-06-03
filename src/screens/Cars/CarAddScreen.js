@@ -11,11 +11,8 @@ import {
     TextInput,
     ActivityIndicator,
     Alert,
-    Modal,
-    FlatList,
-    TouchableWithoutFeedback,
 } from 'react-native';
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,12 +20,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { getMakes, getModels } from 'car-info';
 import { addCar } from '../../api/CarRental';
+import ChoiceModal from './components/ChoiceModal';
 
 const screenW = Dimensions.get('window').width;
 const maxImages = 4;
 const carouselH = 220;
 
-export default function CarAddScreen({route}) {
+export default function CarAddScreen({ route }) {
     const navigation = useNavigation();
     const [userId, setUserId] = useState(route?.params?.userId || null);
 
@@ -47,8 +45,10 @@ export default function CarAddScreen({route}) {
     const [latitude, setLatitude] = useState('');
     const [longitude, setLongitude] = useState('');
     const [description, setDescription] = useState('');
+
     const [images, setImages] = useState([]);
     const [page, setPage] = useState(0);
+
     const [loading, setLoading] = useState(false);
 
     const [brandModal, setBrandModal] = useState(false);
@@ -61,25 +61,36 @@ export default function CarAddScreen({route}) {
 
     const pickImages = async () => {
         const left = maxImages - images.length;
-        if (left === 0) return Alert.alert('You can upload up to 4 images');
-        const res = await ImagePicker.launchImageLibraryAsync({
+        if (left === 0) {
+            Alert.alert('You can upload up to 4 images');
+            return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsMultipleSelection: true,
             selectionLimit: left,
             quality: 0.85,
         });
-        if (!res.canceled) setImages([...images, ...res.assets.slice(0, left)]);
+        if (!result.canceled) {
+            setImages([...images, ...result.assets.slice(0, left)]);
+        }
     };
 
     const removeImage = (idx) => {
         const next = images.filter((_, i) => i !== idx);
         setImages(next);
-        if (page >= next.length) setPage(next.length - 1);
+        if (page >= next.length) {
+            setPage(next.length - 1);
+        }
     };
 
     const saveCar = async () => {
         if (!brand || !model || !year || !color || !pricePerDay || !country || !city) {
             Alert.alert('Fill all required fields');
+            return;
+        }
+        if (!userId) {
+            Alert.alert('Error', 'User ID not available');
             return;
         }
         try {
@@ -94,13 +105,19 @@ export default function CarAddScreen({route}) {
             data.append('city', city);
             data.append('latitude', latitude);
             data.append('longitude', longitude);
-            data.append('description', description);
+                data.append('description', description);
+
             images.forEach((img, i) =>
-                data.append('images', { uri: img.uri, name: `car_${i}.jpg`, type: 'image/jpeg' })
+                data.append('images', {
+                    uri: img.uri,
+                    name: `car_${i}.jpg`,
+                    type: 'image/jpeg',
+                })
             );
-            const response = await addCar(userId, data);
+
+            await addCar(userId, data);
             navigation.goBack();
-        } catch {
+        } catch (error) {
             console.log('Save car error:', error);
             Alert.alert('Error', 'Unable to save car');
         } finally {
@@ -116,7 +133,7 @@ export default function CarAddScreen({route}) {
                         <Ionicons name="chevron-back" size={28} color="#0A84FF" />
                     </TouchableOpacity>
                     <Text style={styles.title}>Car Registration</Text>
-                    <View style={{ width: 20 }}/>
+                    <View style={{ width: 20 }} />
                 </View>
 
                 {loading && (
@@ -132,9 +149,11 @@ export default function CarAddScreen({route}) {
                                 horizontal
                                 pagingEnabled
                                 showsHorizontalScrollIndicator={false}
-                                onMomentumScrollEnd={(e) =>
-                                    setPage(Math.round(e.nativeEvent.contentOffset.x / (screenW - 32)))
-                                }
+                                onMomentumScrollEnd={(e) => {
+                                    const w = screenW - 32;
+                                    const idx = Math.round(e.nativeEvent.contentOffset.x / w);
+                                    setPage(idx);
+                                }}
                             >
                                 {images.length === 0 ? (
                                     <TouchableOpacity style={styles.placeholder} onPress={pickImages}>
@@ -155,16 +174,21 @@ export default function CarAddScreen({route}) {
                                     ))
                                 )}
                             </ScrollView>
+
                             {images.length > 0 && (
                                 <View style={styles.dots}>
                                     {images.map((_, i) => (
                                         <View
                                             key={i}
-                                            style={[styles.dot, i === page && { backgroundColor: '#0A84FF' }]}
+                                            style={[
+                                                styles.dot,
+                                                i === page && { backgroundColor: '#0A84FF' },
+                                            ]}
                                         />
                                     ))}
                                 </View>
                             )}
+
                             {images.length > 0 && images.length < maxImages && (
                                 <TouchableOpacity style={styles.addMoreBtn} onPress={pickImages}>
                                     <Ionicons name="add" size={22} color="#0A84FF" />
@@ -173,12 +197,17 @@ export default function CarAddScreen({route}) {
                         </View>
 
                         <BlurView intensity={30} tint="light" style={styles.glass}>
-                            <PickerField label="Brand" value={brand} onPress={() => setBrandModal(true)} />
+                            <PickerField
+                                label="Brand"
+                                value={brand}
+                                onPress={() => setBrandModal(true)}
+                            />
                             <PickerField
                                 label="Model"
                                 value={model}
                                 onPress={() => brand && setModelModal(true)}
                             />
+
                             {[
                                 { l: 'Year', v: year, s: setYear, kb: 'numeric' },
                                 { l: 'Color', v: color, s: setColor },
@@ -187,9 +216,16 @@ export default function CarAddScreen({route}) {
                                 { l: 'City', v: city, s: setCity },
                                 { l: 'Latitude', v: latitude, s: setLatitude, kb: 'numeric' },
                                 { l: 'Longitude', v: longitude, s: setLongitude, kb: 'numeric' },
-                            ].map((f) => (
-                                <Input key={f.l} label={f.l} value={f.v} onChange={f.s} kb={f.kb} />
+                            ].map((field) => (
+                                <Input
+                                    key={field.l}
+                                    label={field.l}
+                                    value={field.v}
+                                    onChange={field.s}
+                                    kb={field.kb}
+                                />
                             ))}
+
                             <Text style={styles.label}>Description</Text>
                             <TextInput
                                 style={[styles.input, styles.textarea]}
@@ -270,44 +306,6 @@ function Input({ label, value, onChange, kb }) {
     );
 }
 
-function ChoiceModal({ visible, title, data, search, setSearch, onSelect, onClose }) {
-    const filtered = data.filter((d) => d.toLowerCase().includes(search.toLowerCase()));
-    return (
-        <Modal visible={visible} transparent animationType="slide">
-            <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.modalWrap}>
-                    <TouchableWithoutFeedback>
-                        <View style={styles.modal}>
-                            <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>{title}</Text>
-                                <TouchableOpacity onPress={onClose}>
-                                    <Ionicons name="close" size={24} color="#1E2B3B" />
-                                </TouchableOpacity>
-                            </View>
-                            <TextInput
-                                placeholder="Search…"
-                                value={search}
-                                onChangeText={setSearch}
-                                style={styles.searchInput}
-                            />
-                            <FlatList
-                                data={filtered}
-                                keyExtractor={(i) => i}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity style={styles.item} onPress={() => onSelect(item)}>
-                                        <Text style={styles.itemTxt}>{item}</Text>
-                                    </TouchableOpacity>
-                                )}
-                                ListFooterComponent={<View style={{ height: 24 }} />}
-                            />
-                        </View>
-                    </TouchableWithoutFeedback>
-                </View>
-            </TouchableWithoutFeedback>
-        </Modal>
-    );
-}
-
 const blue = '#0A84FF';
 const light = '#F4F6FA';
 
@@ -321,7 +319,11 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     title: { fontSize: 22, fontWeight: '700', color: '#1E2B3B' },
-    loader: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+    loader: {
+        ...StyleSheet.absoluteFillObject,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     content: { padding: 16 },
     carouselWrapper: { height: carouselH, marginBottom: 20, position: 'relative' },
     placeholder: {
@@ -333,8 +335,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     placeholderTxt: { marginTop: 6, color: '#AAB4C0' },
-    imageSlot: { width: screenW - 32, height: carouselH, marginRight: 16 },
-    carouselImage: { width: '100%', height: '100%', borderRadius: 12 },
+    imageSlot: {
+        width: screenW - 32,
+        height: carouselH,
+        marginRight: 16,
+    },
+    carouselImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 12,
+    },
     deleteBtn: {
         position: 'absolute',
         top: 8,
@@ -366,7 +376,12 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.4)',
         marginBottom: 20,
     },
-    label: { fontSize: 15, fontWeight: '500', color: '#1E2B3B', marginBottom: 4 },
+    label: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: '#1E2B3B',
+        marginBottom: 4,
+    },
     input: {
         backgroundColor: 'rgba(255,255,255,0.6)',
         borderRadius: 12,
@@ -387,37 +402,4 @@ const styles = StyleSheet.create({
         elevation: 6,
     },
     btnTxt: { color: '#FFF', fontSize: 17, fontWeight: '600' },
-    modalWrap: { flex: 1, justifyContent: 'flex-end' },
-    modal: {
-        height: '80%',
-        backgroundColor: '#FFF',
-        borderTopLeftRadius: 8,
-        borderTopRightRadius: 8,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-    },
-    modalTitle: { fontSize: 18, fontWeight: '600', color: '#1E2B3B' },
-    searchInput: {
-        backgroundColor: '#F0F3F6',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        marginHorizontal: 20,
-        marginBottom: 8,
-    },
-    item: { paddingVertical: 12, paddingHorizontal: 20 },
-    itemTxt: { fontSize: 16, color: '#1E2B3B' },
 });

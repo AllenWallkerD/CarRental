@@ -22,24 +22,30 @@ export const listCars = async (userId) => {
     }
 };
 
-export const getOwnerRequests = async (ownerId) => {
+export const updateCar = async (userId, carId, formData) => {
     try {
-        const res = await api.get(`/owner-requests/${ownerId}`);
+        const res = await api.patch(
+            `/user/${userId}/update/car/${carId}`,
+            formData,
+            {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            }
+        );
         return res.data;
     } catch (err) {
         const errMsg = err?.response?.data || err.message;
-        console.error('getOwnerRequests error:', errMsg);
+        console.error('Update car error:', errMsg);
         throw err;
     }
 };
 
-export const approveRequest = async (ownerId, requestId) => {
+export const deleteCar = async (userId, carId) => {
     try {
-        const res = await api.post(`/user/${ownerId}/approve/${requestId}`);
+        const res = await api.delete(`/user/${userId}/delete/car/${carId}`);
         return res.data;
     } catch (err) {
         const errMsg = err?.response?.data || err.message;
-        console.error('approveRequest error:', errMsg);
+        console.error('Delete car error:', errMsg);
         throw err;
     }
 };

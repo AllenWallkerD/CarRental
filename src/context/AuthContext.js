@@ -1,4 +1,3 @@
-// context/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -8,7 +7,6 @@ export const AuthProvider = ({ children }) => {
     const [userToken, setUserToken] = useState(undefined);
     const [userId, setUserId]       = useState(null);
 
-    // При старте: вычитываем сохранённые token + userId
     useEffect(() => {
         (async () => {
             const storedToken = await AsyncStorage.getItem('userToken');
