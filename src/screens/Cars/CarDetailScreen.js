@@ -1,4 +1,5 @@
-import React, { useLayoutEffect, useEffect } from 'react';
+// screens/Cars/CarDetailScreen.js
+import React, { useLayoutEffect, useEffect, useState } from 'react';
 import {
     SafeAreaView,
     View,
@@ -10,16 +11,19 @@ import {
     ActivityIndicator,
     StyleSheet,
     Dimensions,
+    Text,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
+import * as ImagePicker from 'expo-image-picker';
 import useCarDetail from './hooks/useCarDetail';
 import ChoiceModal from './components/ChoiceModal';
-import { Text } from 'react-native';
 
 const { width: screenW } = Dimensions.get('window');
 const blue = '#0A84FF';
+const maxImages = 4;
+const carouselH = 220;
 
 export default function CarDetailScreen({ navigation, route }) {
     const { car: initialCar } = route.params;
@@ -63,6 +67,12 @@ export default function CarDetailScreen({ navigation, route }) {
         handleSave,
     } = useCarDetail(initialCar);
 
+    // Manage images: remote vs local
+    const [images, setImages] = useState(
+        initialCar.imageUrls.map((url) => ({ uri: url, isRemote: true }))
+    );
+    const [page, setPage] = useState(0);
+
     useLayoutEffect(() => {
         navigation.setOptions({
             headerShown: true,
@@ -75,10 +85,7 @@ export default function CarDetailScreen({ navigation, route }) {
                 color: '#1E2B3B',
             },
             headerLeft: () => (
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={{ paddingHorizontal: 12 }}
-                >
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingHorizontal: 12 }}>
                     <Ionicons name="chevron-back" size={28} color={blue} />
                 </TouchableOpacity>
             ),
@@ -87,19 +94,16 @@ export default function CarDetailScreen({ navigation, route }) {
                     return <ActivityIndicator style={{ marginRight: 16 }} size="small" color={blue} />;
                 }
                 return (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
-                        {editMode && (
-                            <TouchableOpacity onPress={cancelEdit} style={{ paddingHorizontal: 8 }}>
+                    <View style={styles.icons}>
+                        {editMode ?
+                            <TouchableOpacity onPress={cancelEdit}>
                                 <Ionicons name="close-circle-outline" size={24} color={blue} />
                             </TouchableOpacity>
-                        )}
-                        <TouchableOpacity onPress={toggleEditMode} style={{ paddingHorizontal: 8 }}>
-                            <Ionicons
-                                name={editMode ? 'checkmark-circle-outline' : 'pencil-outline'}
-                                size={24}
-                                color={blue}
-                            />
-                        </TouchableOpacity>
+                        :
+                            <TouchableOpacity onPress={toggleEditMode}>
+                                <Ionicons name={'pencil-outline'} size={24} color={blue} />
+                            </TouchableOpacity>
+                        }
                     </View>
                 );
             },
@@ -107,10 +111,69 @@ export default function CarDetailScreen({ navigation, route }) {
     }, [navigation, car, editMode, loading]);
 
     useEffect(() => {
-        navigation.setOptions({
-            headerTitle: `${brand || car.brand} ${model || car.model}`,
-        });
+        navigation.setOptions({ headerTitle: `${brand || car.brand} ${model || car.model}` });
     }, [brand, model, navigation, car.brand, car.model]);
+
+    const pickImages = async () => {
+        const left = maxImages - images.length;
+        if (left === 0) {
+            Alert.alert('You can upload up to 4 images');
+            return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsMultipleSelection: true,
+            selectionLimit: left,
+            quality: 0.85,
+        });
+        if (!result.canceled) {
+            const picked = result.assets.slice(0, left).map((asset) => ({
+                uri: asset.uri,
+                isRemote: false,
+            }));
+            setImages((prev) => [...prev, ...picked]);
+        }
+    };
+
+    const removeImage = (idx) => {
+        const next = images.filter((_, i) => i !== idx);
+        setImages(next);
+        if (page >= next.length) {
+            setPage(next.length - 1);
+        }
+    };
+
+    const onSave = async () => {
+        // Build FormData for changed fields + images
+        const formData = new FormData();
+        formData.append('brand', brand.trim());
+        formData.append('model', model.trim());
+        formData.append('year', year.trim());
+        formData.append('color', color.trim());
+        formData.append('pricePerDay', pricePerDay.trim());
+        formData.append('country', country.trim());
+        formData.append('city', city.trim());
+        formData.append('latitude', latitude.trim());
+        formData.append('longitude', longitude.trim());
+        formData.append('description', description.trim());
+
+        // Send list of existing remote URLs to keep
+        const existingUrls = images.filter((img) => img.isRemote).map((img) => img.uri);
+        formData.append('existingImageUrls', JSON.stringify(existingUrls));
+
+        // Append new images
+        images
+            .filter((img) => !img.isRemote)
+            .forEach((img, i) => {
+                formData.append('newImages', {
+                    uri: img.uri,
+                    name: `car_${i}.jpg`,
+                    type: 'image/jpeg',
+                });
+            });
+
+        await handleSave(formData);
+    };
 
     return (
         <LinearGradient
@@ -121,33 +184,57 @@ export default function CarDetailScreen({ navigation, route }) {
         >
             <SafeAreaView style={styles.container}>
                 <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+                    {/* Image Carousel */}
                     <ScrollView
                         horizontal
                         pagingEnabled
                         showsHorizontalScrollIndicator={false}
                         style={styles.carousel}
+                        onMomentumScrollEnd={(e) => {
+                            const idx = Math.round(e.nativeEvent.contentOffset.x / screenW);
+                            setPage(idx);
+                        }}
                     >
-                        {car.imageUrls.map((url, idx) => (
-                            <Image key={idx} source={{ uri: url }} style={styles.carouselImage} />
-                        ))}
+                        {images.length === 0 ? (
+                            <View style={styles.placeholder}>
+                                <Ionicons name="image-outline" size={48} color="#AAB4C0" />
+                                <Text style={styles.placeholderTxt}>No photos</Text>
+                            </View>
+                        ) : (
+                            images.map((img, idx) => (
+                                <View key={idx} style={styles.imageSlot}>
+                                    <Image source={{ uri: img.uri }} style={styles.carouselImage} />
+                                    {editMode && (
+                                        <TouchableOpacity style={styles.deleteBtn} onPress={() => removeImage(idx)}>
+                                            <Ionicons name="close" size={20} color="#FFF" />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            ))
+                        )}
                     </ScrollView>
 
                     <View style={styles.dotsContainer}>
-                        {car.imageUrls.map((_, idx) => (
-                            <View key={idx} style={styles.dot} />
+                        {images.map((_, idx) => (
+                            <View key={idx} style={[styles.dot, idx === page && { backgroundColor: blue }]} />
                         ))}
                     </View>
 
+                    {editMode && images.length < maxImages && (
+                        <TouchableOpacity style={styles.addMoreBtn} onPress={pickImages}>
+                            <Ionicons name="add" size={22} color="#0A84FF" />
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Data Card */}
                     <View style={styles.card}>
+                        {/* Brand */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Brand</Text>
                             </View>
                             {editMode ? (
-                                <TouchableOpacity
-                                    style={styles.rowInput}
-                                    onPress={() => setBrandModalVisible(true)}
-                                >
+                                <TouchableOpacity style={styles.rowInput} onPress={() => setBrandModalVisible(true)}>
                                     <Text style={styles.rowValue}>{brand || 'Select brand'}</Text>
                                 </TouchableOpacity>
                             ) : (
@@ -156,15 +243,13 @@ export default function CarDetailScreen({ navigation, route }) {
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Model */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Model</Text>
                             </View>
                             {editMode ? (
-                                <TouchableOpacity
-                                    style={styles.rowInput}
-                                    onPress={() => brand && setModelModalVisible(true)}
-                                >
+                                <TouchableOpacity style={styles.rowInput} onPress={() => brand && setModelModalVisible(true)}>
                                     <Text style={styles.rowValue}>{model || 'Select model'}</Text>
                                 </TouchableOpacity>
                             ) : (
@@ -173,6 +258,7 @@ export default function CarDetailScreen({ navigation, route }) {
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Year */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Year</Text>
@@ -192,6 +278,7 @@ export default function CarDetailScreen({ navigation, route }) {
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Color */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Color</Text>
@@ -210,6 +297,7 @@ export default function CarDetailScreen({ navigation, route }) {
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Price/Day */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Price/Day</Text>
@@ -229,6 +317,7 @@ export default function CarDetailScreen({ navigation, route }) {
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Country */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Country</Text>
@@ -247,6 +336,7 @@ export default function CarDetailScreen({ navigation, route }) {
                         </View>
                         <View style={styles.separator} />
 
+                        {/* City */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>City</Text>
@@ -265,6 +355,7 @@ export default function CarDetailScreen({ navigation, route }) {
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Latitude */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Latitude</Text>
@@ -279,13 +370,12 @@ export default function CarDetailScreen({ navigation, route }) {
                                     textAlign="right"
                                 />
                             ) : (
-                                <Text style={styles.rowValue}>
-                                    {car.latitude?.toFixed(6) ?? '—'}
-                                </Text>
+                                <Text style={styles.rowValue}>{car.latitude?.toFixed(6) ?? '—'}</Text>
                             )}
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Longitude */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Longitude</Text>
@@ -300,23 +390,21 @@ export default function CarDetailScreen({ navigation, route }) {
                                     textAlign="right"
                                 />
                             ) : (
-                                <Text style={styles.rowValue}>
-                                    {car.longitude?.toFixed(6) ?? '—'}
-                                </Text>
+                                <Text style={styles.rowValue}>{car.longitude?.toFixed(6) ?? '—'}</Text>
                             )}
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Available */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Available</Text>
                             </View>
-                            <Text style={styles.rowValue}>
-                                {car.available ? 'Yes' : 'No'}
-                            </Text>
+                            <Text style={styles.rowValue}>{car.available ? 'Yes' : 'No'}</Text>
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Owner Name */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Owner Name</Text>
@@ -327,6 +415,7 @@ export default function CarDetailScreen({ navigation, route }) {
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Owner Email */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Owner Email</Text>
@@ -335,6 +424,7 @@ export default function CarDetailScreen({ navigation, route }) {
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Owner Phone */}
                         <View style={styles.row}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Owner Phone</Text>
@@ -343,6 +433,7 @@ export default function CarDetailScreen({ navigation, route }) {
                         </View>
                         <View style={styles.separator} />
 
+                        {/* Description */}
                         <View style={[styles.row, { alignItems: 'flex-start' }]}>
                             <View style={styles.labelContainer}>
                                 <Text style={styles.rowLabel}>Description</Text>
@@ -357,13 +448,12 @@ export default function CarDetailScreen({ navigation, route }) {
                                     textAlign="right"
                                 />
                             ) : (
-                                <Text style={[styles.rowValue, { flex: 1 }]}>
-                                    {car.description || '—'}
-                                </Text>
+                                <Text style={[styles.rowValue, { flex: 1 }]}>{car.description || '—'}</Text>
                             )}
                         </View>
                     </View>
 
+                    {/* Map View */}
                     {hasCoordinates && (
                         <View style={styles.mapContainer}>
                             <MapView
@@ -376,10 +466,7 @@ export default function CarDetailScreen({ navigation, route }) {
                                 }}
                             >
                                 <Marker
-                                    coordinate={{
-                                        latitude: car.latitude,
-                                        longitude: car.longitude,
-                                    }}
+                                    coordinate={{ latitude: car.latitude, longitude: car.longitude }}
                                     title={`${car.brand} ${car.model}`}
                                     description={`${car.city}, ${car.country}`}
                                 />
@@ -415,6 +502,12 @@ export default function CarDetailScreen({ navigation, route }) {
                 }}
                 onClose={() => setModelModalVisible(false)}
             />
+
+            {editMode && (
+                <TouchableOpacity style={styles.saveButton} onPress={onSave}>
+                    {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
+                </TouchableOpacity>
+            )}
         </LinearGradient>
     );
 }
@@ -423,21 +516,46 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    icons: {
+      alignSelf: 'center',
+      justifyContent: 'center',
+    },
     carousel: {
         width: screenW,
-        height: 220,
+        height: carouselH,
         marginBottom: 12,
+    },
+    placeholder: {
+        width: screenW,
+        height: carouselH,
+        backgroundColor: '#F0F3F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    placeholderTxt: { marginTop: 6, color: '#AAB4C0' },
+    imageSlot: {
+        width: screenW,
+        height: carouselH,
+        position: 'relative',
     },
     carouselImage: {
         width: screenW,
-        height: 220,
+        height: carouselH,
         resizeMode: 'cover',
+    },
+    deleteBtn: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 12,
+        padding: 4,
     },
     dotsContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
         gap: 6,
-        marginBottom: 24,
+        marginBottom: 16,
     },
     dot: {
         width: 8,
@@ -445,6 +563,15 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         backgroundColor: '#C5CED6',
     },
+    addMoreBtn: {
+        position: 'absolute',
+        right: 16,
+        top: carouselH - 48,
+        backgroundColor: '#FFFFFFDD',
+        borderRadius: 16,
+        padding: 6,
+    },
+
     card: {
         borderRadius: 16,
         backgroundColor: 'rgba(255,255,255,0.8)',
@@ -505,5 +632,23 @@ const styles = StyleSheet.create({
     },
     map: {
         flex: 1,
+    },
+
+    saveButton: {
+        position: 'absolute',
+        bottom: 16,
+        right: 16,
+        left: 16,
+        backgroundColor: blue,
+        borderRadius: 24,
+        paddingVertical: 14,
+        alignItems: 'center',
+        marginHorizontal: 16,
+        elevation: 4,
+    },
+    saveButtonText: {
+        color: '#FFF',
+        fontSize: 17,
+        fontWeight: '600',
     },
 });

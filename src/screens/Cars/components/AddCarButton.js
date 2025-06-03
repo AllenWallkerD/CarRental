@@ -26,7 +26,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginHorizontal: 16,
         marginVertical: 12,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },

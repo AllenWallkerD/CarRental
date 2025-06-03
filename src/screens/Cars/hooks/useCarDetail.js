@@ -38,7 +38,6 @@ export default function useCarDetail(initialCar) {
 
     const toggleEditMode = () => {
         if (editMode) {
-            handleSave();
         } else {
             setEditMode(true);
         }
@@ -58,32 +57,31 @@ export default function useCarDetail(initialCar) {
         setEditMode(false);
     };
 
-    const handleSave = async () => {
+    // new handleSave now expects formData built externally
+    const handleSave = async (formData) => {
         setLoading(true);
-
-        const updatedCar = {
-            ...initialCar,
-            brand: brand.trim(),
-            model: model.trim(),
-            year: Number(year.trim()),
-            color: color.trim(),
-            pricePerDay: Number(pricePerDay.trim()),
-            country: country.trim(),
-            city: city.trim(),
-            latitude: parseFloat(latitude.trim()) || null,
-            longitude: parseFloat(longitude.trim()) || null,
-            description: description.trim(),
-        };
-
-        if (!updatedCar.brand || !updatedCar.model || !year.trim() || !updatedCar.color) {
+        if (!brand.trim() || !model.trim() || !year.trim() || !color.trim()) {
             Alert.alert('Error', 'Brand, model, year, and color are required.');
             setLoading(false);
             return;
         }
-
         try {
-            await updateCar(userId, initialCar.id, updatedCar);
-            setCar(updatedCar);
+            await updateCar(userId, initialCar.id, formData);
+            // assume API returns updated car object
+            const updated = {
+                ...car,
+                brand: brand.trim(),
+                model: model.trim(),
+                year: Number(year.trim()),
+                color: color.trim(),
+                pricePerDay: Number(pricePerDay.trim()),
+                country: country.trim(),
+                city: city.trim(),
+                latitude: parseFloat(latitude.trim()) || null,
+                longitude: parseFloat(longitude.trim()) || null,
+                description: description.trim(),
+            };
+            setCar(updated);
             setEditMode(false);
         } catch (err) {
             Alert.alert('Update Failed', err?.response?.data || err.message);

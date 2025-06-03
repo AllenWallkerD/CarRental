@@ -1,10 +1,22 @@
 import React, { useState, useCallback } from 'react';
-import { SafeAreaView, View, StyleSheet, FlatList, ActivityIndicator, Text, Alert } from 'react-native';
+import {
+    SafeAreaView,
+    View,
+    StyleSheet,
+    FlatList,
+    ActivityIndicator,
+    Text,
+    Alert,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
-import { listOwnerRequests, approveRequest, rejectRequest } from '../../api/Requests';
+import {
+    listOwnerRequests,
+    approveRequest,
+    rejectRequest,
+} from '../../api/Requests';
 import RequestsCard from './components/RequestsCard';
 
 const blue = '#0A84FF';
@@ -23,9 +35,15 @@ export default function RequestsList({ navigation }) {
             }
             setLoading(true);
             listOwnerRequests(userId)
-                .then((res) => setRequests(res))
+                .then((res) => {
+                    console.log('Fetched requests:', res);
+                    setRequests(res);
+                })
                 .catch((err) => {
-                    console.log('[RequestsList] fetch error:', err?.response?.data || err.message);
+                    console.log(
+                        '[RequestsList] fetch error:',
+                        err?.response?.data || err.message
+                    );
                     setRequests([]);
                 })
                 .finally(() => setLoading(false));
@@ -33,23 +51,37 @@ export default function RequestsList({ navigation }) {
     );
 
     const handleApprove = async (requestId) => {
+        console.log(`Calling approveRequest with requestId = ${requestId}`);
         try {
             await approveRequest(userId, requestId);
             setRequests((prev) =>
-                prev.map((r) => (r.id === requestId ? { ...r, status: 'approved' } : r))
+                prev.map((r) =>
+                    r.id === requestId ? { ...r, status: 'approved' } : r
+                )
             );
         } catch (err) {
+            console.log(
+                '[handleApprove] error:',
+                err?.response?.data || err.message
+            );
             Alert.alert('Error', 'Unable to approve request');
         }
     };
 
     const handleReject = async (requestId) => {
+        console.log(`Calling rejectRequest with requestId = ${requestId}`);
         try {
             await rejectRequest(userId, requestId);
             setRequests((prev) =>
-                prev.map((r) => (r.id === requestId ? { ...r, status: 'rejected' } : r))
+                prev.map((r) =>
+                    r.id === requestId ? { ...r, status: 'rejected' } : r
+                )
             );
         } catch (err) {
+            console.log(
+                '[handleReject] error:',
+                err?.response?.data || err.message
+            );
             Alert.alert('Error', 'Unable to reject request');
         }
     };
@@ -57,7 +89,9 @@ export default function RequestsList({ navigation }) {
     const renderItem = ({ item }) => (
         <RequestsCard
             request={item}
-            onPress={() => navigation.navigate('RequestDetail', { request: item })}
+            onPress={() =>
+                navigation.navigate('RequestDetail', { request: item })
+            }
             onApprove={() => handleApprove(item.id)}
             onReject={() => handleReject(item.id)}
         />
@@ -80,11 +114,24 @@ export default function RequestsList({ navigation }) {
                         data={requests}
                         keyExtractor={(item) => item.id}
                         renderItem={renderItem}
-                        contentContainerStyle={styles.flatContent}
+                        contentContainerStyle={{
+                            flexGrow: 1,
+                            justifyContent:
+                                requests.length === 0 ? 'center' : 'flex-start',
+                            paddingHorizontal: 16,
+                            paddingVertical: 16,
+                        }}
                         ListEmptyComponent={() => (
                             <View style={styles.emptyContainer}>
-                                <Ionicons name="alert-circle-outline" size={64} color={blue} style={{ marginBottom: 16 }} />
-                                <Text style={styles.emptyTitle}>No Requests Found</Text>
+                                <Ionicons
+                                    name="alert-circle-outline"
+                                    size={64}
+                                    color={blue}
+                                    style={{ marginBottom: 16 }}
+                                />
+                                <Text style={styles.emptyTitle}>
+                                    No Requests Found
+                                </Text>
                                 <Text style={styles.emptySubtitle}>
                                     There are currently no rental requests for your cars.
                                 </Text>
@@ -100,8 +147,17 @@ export default function RequestsList({ navigation }) {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    flatContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16 },
     emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    emptyTitle: { fontSize: 20, fontWeight: '600', color: blue, marginBottom: 8 },
-    emptySubtitle: { fontSize: 16, color: '#666', textAlign: 'center', paddingHorizontal: 24 },
+    emptyTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: blue,
+        marginBottom: 8,
+    },
+    emptySubtitle: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        paddingHorizontal: 24,
+    },
 });

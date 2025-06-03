@@ -13,7 +13,7 @@ export const listOwnerRequests = async (ownerId) => {
 
 export const approveRequest = async (ownerId, requestId) => {
     try {
-        const response = await api.put(`/user/${ownerId}/approve/${requestId}`);
+        const response = await api.post(`/user/${ownerId}/approve/${requestId}`);
         return response.data;
     } catch (err) {
         const errMsg = err?.response?.data || err.message;
@@ -24,7 +24,7 @@ export const approveRequest = async (ownerId, requestId) => {
 
 export const rejectRequest = async (ownerId, requestId) => {
     try {
-        const response = await api.put(`/user/${ownerId}/reject/${requestId}`);
+        const response = await api.post(`/user/${ownerId}/reject/${requestId}`);
         return response.data;
     } catch (err) {
         const errMsg = err?.response?.data || err.message;
