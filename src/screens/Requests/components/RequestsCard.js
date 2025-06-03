@@ -1,23 +1,11 @@
 import React from 'react';
-import {
-    TouchableOpacity,
-    View,
-    Text,
-    Image,
-    StyleSheet,
-    Dimensions
-} from 'react-native';
+import { TouchableOpacity, View, Text, Image, StyleSheet, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 
 const cardWidth = Dimensions.get('window').width - 32;
 
-export default function RequestsCard({ request, onPress }) {
-
-    const thumbnailUrl =
-        request.carImageUrls && request.carImageUrls.length > 0
-            ? request.carImageUrls[0]
-            : null;
-
+export default function RequestsCard({ request, onPress, onApprove, onReject }) {
+    const thumbnailUrl = request.carImageUrls?.[0] || null;
     return (
         <TouchableOpacity onPress={onPress} style={styles.wrapper}>
             <BlurView intensity={20} tint="light" style={styles.card}>
@@ -28,7 +16,6 @@ export default function RequestsCard({ request, onPress }) {
                         <Text style={styles.placeholderText}>No Image</Text>
                     </View>
                 )}
-
                 <View style={styles.info}>
                     <Text style={styles.title}>
                         {request.carBrand} {request.carModel}
@@ -39,6 +26,16 @@ export default function RequestsCard({ request, onPress }) {
                     <Text style={[styles.status, statusStyles[request.status]]}>
                         {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                     </Text>
+                    {request.status === 'pending' && (
+                        <View style={styles.buttonRow}>
+                            <TouchableOpacity style={[styles.button, styles.approve]} onPress={onApprove}>
+                                <Text style={styles.buttonText}>Approve</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.button, styles.reject]} onPress={onReject}>
+                                <Text style={styles.buttonText}>Reject</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
             </BlurView>
         </TouchableOpacity>
@@ -52,7 +49,6 @@ const styles = StyleSheet.create({
     },
     card: {
         width: cardWidth,
-        height: 100,
         borderRadius: 16,
         flexDirection: 'row',
         overflow: 'hidden',
@@ -60,12 +56,12 @@ const styles = StyleSheet.create({
     },
     image: {
         width: 100,
-        height: '100%',
+        height: 120,
         resizeMode: 'cover',
     },
     placeholder: {
         width: 100,
-        height: '100%',
+        height: 120,
         backgroundColor: '#E0E6EF',
         justifyContent: 'center',
         alignItems: 'center',
@@ -100,9 +96,31 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         color: '#FFF',
     },
+    buttonRow: {
+        flexDirection: 'row',
+        marginTop: 8,
+        justifyContent: 'flex-start',
+    },
+    button: {
+        flex: 1,
+        paddingVertical: 6,
+        borderRadius: 6,
+        alignItems: 'center',
+        marginRight: 8,
+    },
+    approve: {
+        backgroundColor: '#5CB85C',
+    },
+    reject: {
+        backgroundColor: '#D9534F',
+    },
+    buttonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
 });
 
-// Different background colors based on status
 const statusStyles = StyleSheet.create({
     pending: {
         backgroundColor: '#F0AD4E',

@@ -7,6 +7,7 @@ import CarListScreen from '../screens/Cars/CarListScreen';
 import CarAddScreen from '../screens/Cars/CarAddScreen';
 import CarDetailScreen from '../screens/Cars/CarDetailScreen';
 import RequestsList from '../screens/Requests/RequestsList';
+import RequestDetail from '../screens/Requests/RequestDetail';
 import LogoutModal from '../components/LogoutModal';
 
 const CarsStack = createNativeStackNavigator();
@@ -21,6 +22,24 @@ function MyCarsStack() {
             <CarsStack.Screen name="CarAdd" component={CarAddScreen} />
             <CarsStack.Screen name="CarDetail" component={CarDetailScreen} />
         </CarsStack.Navigator>
+    );
+}
+
+const RequestsStack = createNativeStackNavigator();
+function MyRequestsStack() {
+    return (
+        <RequestsStack.Navigator screenOptions={{ headerShown: false }}>
+            <RequestsStack.Screen
+                name="RequestsList"
+                component={RequestsList}
+                options={{ headerShown: true, title: 'Requests' }}
+            />
+            <RequestsStack.Screen
+                name="RequestDetail"
+                component={RequestDetail}
+                options={{ headerShown: true, title: 'Request Details' }}
+            />
+        </RequestsStack.Navigator>
     );
 }
 
@@ -60,7 +79,7 @@ export default function AppTabs() {
                 })}
             >
                 <Tab.Screen name="My Cars" component={MyCarsStack} />
-                <Tab.Screen name="Requests" component={RequestsList} />
+                <Tab.Screen name="Requests" component={MyRequestsStack} />
                 <Tab.Screen
                     name="Logout"
                     component={Blank}

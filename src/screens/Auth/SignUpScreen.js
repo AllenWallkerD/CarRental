@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import {
-    View, Text, TextInput, TouchableOpacity,
-    ActivityIndicator, Platform
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    ActivityIndicator,
+    Platform
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AuthorizationAPI from '../../api/Authorization';
@@ -11,14 +15,17 @@ export default function SignUpScreen({ navigation, route }) {
     const profileData = route?.params || {};
 
     const [form, setForm] = useState({
-        username: '', password: '',
-        first_name: '', last_name: '',
+        username: '',
+        password: '',
+        first_name: '',
+        last_name: '',
         date_of_birth: null,
-        email: '', phone_number: '',
+        email: '',
+        phone_number: '',
         preferred_language: 'English',
     });
 
-    const [errors,  setErrors]  = useState({});
+    const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const [showDate, setShowDate] = useState(false);
 
@@ -26,11 +33,11 @@ export default function SignUpScreen({ navigation, route }) {
 
     const validate = () => {
         const e = {};
-        if (!form.username.trim())            e.username = 'Required';
+        if (!form.username.trim()) e.username = 'Required';
         if (!form.password || form.password.length < 8) e.password = 'Min 8 chars';
-        if (!form.first_name.trim())          e.first_name = 'Required';
-        if (!form.last_name.trim())           e.last_name  = 'Required';
-        if (!form.date_of_birth)              e.date_of_birth = 'Pick a date';
+        if (!form.first_name.trim()) e.first_name = 'Required';
+        if (!form.last_name.trim()) e.last_name = 'Required';
+        if (!form.date_of_birth) e.date_of_birth = 'Pick a date';
         if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email';
         if (!/^\d{10,15}$/.test(form.phone_number)) e.phone_number = 'Digits only';
         setErrors(e);
@@ -48,16 +55,35 @@ export default function SignUpScreen({ navigation, route }) {
             date_of_birth: form.date_of_birth.toISOString().slice(0, 10),
         };
 
-
         try {
-            const res = await AuthorizationAPI.register(payload);
+            await AuthorizationAPI.register(payload);
             navigation.replace('Login');
         } catch (err) {
             console.log('ERROR RESPONSE ←', err.response?.data);
+
             const data = err.response?.data;
-            if (data?.errors)       setErrors(data.errors);
-            else if (data?.message) setErrors({ message: data.message });
-            else                    setErrors({ message: 'Unknown server error.' });
+            const newErrors = {};
+
+            if (data && typeof data === 'object' && data.errors) {
+                Object.entries(data.errors).forEach(([field, messages]) => {
+                    if (Array.isArray(messages) && messages.length > 0) {
+                        newErrors[field] = messages[0];
+                    } else if (typeof messages === 'string') {
+                        newErrors[field] = messages;
+                    }
+                });
+            }
+            else if (data && typeof data === 'object' && typeof data.message === 'string') {
+                newErrors.message = data.message;
+            }
+            else if (typeof data === 'string') {
+                newErrors.message = data;
+            }
+            else {
+                newErrors.message = 'Unknown server error.';
+            }
+
+            setErrors(newErrors);
         } finally {
             setLoading(false);
         }
@@ -68,13 +94,13 @@ export default function SignUpScreen({ navigation, route }) {
             <Text style={styles.title}>Create account</Text>
 
             {[
-                { k:'username',  ph:'Username' },
-                { k:'password',  ph:'Password', secure:true },
-                { k:'first_name', ph:'First Name' },
-                { k:'last_name',  ph:'Last Name' },
-                { k:'email',      ph:'Email', kb:'email-address' },
-                { k:'phone_number', ph:'Phone Number', kb:'phone-pad' },
-                { k:'preferred_language', ph:'Preferred Language' },
+                { k: 'username', ph: 'Username' },
+                { k: 'password', ph: 'Password', secure: true },
+                { k: 'first_name', ph: 'First Name' },
+                { k: 'last_name', ph: 'Last Name' },
+                { k: 'email', ph: 'Email', kb: 'email-address' },
+                { k: 'phone_number', ph: 'Phone Number', kb: 'phone-pad' },
+                { k: 'preferred_language', ph: 'Preferred Language' },
             ].map(f => (
                 <View style={styles.wrap} key={f.k}>
                     <TextInput
@@ -125,7 +151,9 @@ export default function SignUpScreen({ navigation, route }) {
             )}
 
             {errors.message && (
-                <Text style={[styles.err, { textAlign: 'center' }]}>{errors.message}</Text>
+                <Text style={[styles.err, { textAlign: 'center', marginBottom: 12 }]}>
+                    {errors.message}
+                </Text>
             )}
 
             <TouchableOpacity
