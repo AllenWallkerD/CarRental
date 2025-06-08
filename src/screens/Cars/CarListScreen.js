@@ -93,6 +93,7 @@ export default function CarListScreen({ navigation }) {
                             />
                         )}
                         stickyHeaderIndices={[0]}
+                        ListHeaderComponentStyle={{backgroundColor: 'white'}}
                         ListHeaderComponent={
                             <AddCarButton onPress={() => navigation.navigate('CarAdd', { userId })} />
                         }
