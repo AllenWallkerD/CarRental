@@ -2,7 +2,7 @@ import api from './baseURL';
 
 export const addCar = async (userId, data) => {
     try {
-        const res = await api.post(`/user/${userId}/add/cars`, data);
+        const res = await api.post(`rental/add/cars`, data);
         return res.data;
     } catch (err) {
         const errMsg = err?.response?.data || err.message;
@@ -13,7 +13,7 @@ export const addCar = async (userId, data) => {
 
 export const listCars = async (userId) => {
     try {
-        const res = await api.get(`/user/${userId}/cars`);
+        const res = await api.get(`rental/owner/cars`);
         return res.data;
     } catch (err) {
         const errMsg = err?.response?.data || err.message;
@@ -25,7 +25,7 @@ export const listCars = async (userId) => {
 export const updateCar = async (userId, carId, formData) => {
     try {
         const res = await api.patch(
-            `/user/${userId}/update/car/${carId}`,
+            `/rental/update/car/${carId}`,
             formData,
             {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -41,7 +41,7 @@ export const updateCar = async (userId, carId, formData) => {
 
 export const deleteCar = async (userId, carId) => {
     try {
-        const res = await api.delete(`/user/${userId}/delete/car/${carId}`);
+        const res = await api.delete(`/rental/delete/car/${carId}`);
         return res.data;
     } catch (err) {
         const errMsg = err?.response?.data || err.message;

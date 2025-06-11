@@ -1,10 +1,10 @@
 import api from './baseURL';
 
 const AuthorizationAPI = {
-    register: (payload) => api.post('/auth/register', payload),
+    register: (payload) => api.post('/auth/owner/register', payload),
 
     login: async (creds) => {
-        const res = await api.post('/auth/login', creds);
+        const res = await api.post('/auth/owner/login', creds);
         const data = res.data;
 
         if (data.token && data.userId) {

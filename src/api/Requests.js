@@ -2,7 +2,7 @@ import api from "./baseURL";
 
 export const listOwnerRequests = async (ownerId) => {
     try {
-        const response = await api.get(`/owner-requests/${ownerId}`);
+        const response = await api.get(`/rental/owner-requests`);
         return response.data;
     } catch (err) {
         const errMsg = err?.response?.data || err.message;
@@ -13,7 +13,7 @@ export const listOwnerRequests = async (ownerId) => {
 
 export const approveRequest = async (ownerId, requestId) => {
     try {
-        const response = await api.post(`/user/${ownerId}/approve/${requestId}`);
+        const response = await api.post(`/rental/owner/request/${requestId}/approve`);
         return response.data;
     } catch (err) {
         const errMsg = err?.response?.data || err.message;
@@ -24,7 +24,7 @@ export const approveRequest = async (ownerId, requestId) => {
 
 export const rejectRequest = async (ownerId, requestId) => {
     try {
-        const response = await api.post(`/user/${ownerId}/reject/${requestId}`);
+        const response = await api.post(`/rental/owner/request/${requestId}/reject`);
         return response.data;
     } catch (err) {
         const errMsg = err?.response?.data || err.message;
